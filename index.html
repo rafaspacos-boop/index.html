@@ -27,65 +27,12 @@
         } 
          .bar {
             width: 6px;
-            height: 30px;
+            height: 10px;
             background-color: lightblue;
             border-radius: 10px;
-            animation: bewegen 1s infinite ease-in-out alternate;
             transition: height 0.15s ease;
             }  
-         .bar-1 {
-            height: 20px;
-        }
-
-        .bar-2 {
-            height: 45px;
-        }
-
-        .bar-3 {
-            height: 65px;
-        }
-
-        .bar-4 {
-            height: 40px;
-        }
-
-        .bar-5 {
-            height: 25px;
-        }
-
-        .bar-6 {
-            height: 35px;
-        }
-
-        @keyframes bewegen {
-            0% {
-                transform: scaleY(0.5);
-            }
-            50% {
-                transform: scaleY(1.5);
-            }
-            100% {
-                transform: scaleY(0.5);
-            }
-            }
-            .bar-1 {
-                animation-delay: 0s;
-            }
-            .bar-2 {
-                animation-delay: 0.1s;
-            }
-            .bar-3 {
-                animation-delay: 0.2s;
-            }
-            .bar-4 {
-                animation-delay: 0.3s;
-            }
-            .bar-5 {
-                animation-delay: 0.4s;
-            }
-            .bar-6 {
-                animation-delay: 0.5s;
-                }                  
+                
     </style>
     
 </head>
@@ -102,64 +49,98 @@
     <div class="bar bar-6"></div>
     </div>
     
-    <script>
-          let alleBalken = document.querySelectorAll(".bar");
-          let audioDatei = document.querySelector("#audioFile");
-          let audioPlayer = document.querySelector("#audio");
-          audioPlayer.addEventListener("play", function() {
-          audioContext.resume();
-          });
-          let audioContext = new AudioContext();
-          let analyser = audioContext.createAnalyser();
-          let audioQuelle = audioContext.createMediaElementSource(audioPlayer);
-          audioQuelle.connect(analyser);
-          analyser.connect(audioContext.destination);
-          audioDatei.addEventListener("change", function() {
-          let datei = audioDatei.files[0];
-          audioPlayer.src = URL.createObjectURL(datei);
-          });
-          
-          console.log(audioDatei);
-          console.log(audioPlayer);
-        
-        let aktuelleHoehen = [];
-        let zielHoehen = [];
+<script>
+    let alleBalken = document.querySelectorAll(".bar");
 
-        // Startwerte festlegen
-        for (let i = 0; i < alleBalken.length; i++) {
+    let audioDatei = document.querySelector("#audioFile");
+    let audioPlayer = document.querySelector("#audio");
 
-            aktuelleHoehen[i] = 30;
+// AudioContext erstellen
+    let audioContext = new AudioContext();
 
-            zielHoehen[i] = Math.random() * 50 + 10;
+// Analyser erstellen
+    let analyser = audioContext.createAnalyser();
+
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.85;
+
+// Arrays erstellen
+    let aktuelleHoehen = [];
+    let zielHoehen = [];
+
+// Messwerte speichern
+    let daten = new Uint8Array(analyser.frequencyBinCount);
+
+// Audioquelle erstellen
+    let audioQuelle = audioContext.createMediaElementSource(audioPlayer);
+
+// Audioverbindungen
+    audioQuelle.connect(analyser);
+    analyser.connect(audioContext.destination);
+
+// Startwerte festlegen
+    for (let i = 0; i < alleBalken.length; i++) {
+
+      aktuelleHoehen[i] = 30;
+      zielHoehen[i] = 30;
+
+    }
+
+// AudioContext aktivieren
+    audioPlayer.addEventListener("play", function() {
+
+    audioContext.resume();
+
+    });
+
+// Audiodatei laden
+audioDatei.addEventListener("change", function() {
+
+    let datei = audioDatei.files[0];
+
+    audioPlayer.src = URL.createObjectURL(datei);
+
+    });
+
+// Frequenzdaten auslesen
+setInterval(function() {
+
+    analyser.getByteFrequencyData(daten);
+
+    for (let i = 0; i < alleBalken.length; i++) {
+
+        let start = Math.floor(i * daten.length / alleBalken.length);
+
+        let ende = Math.floor((i + 1) * daten.length / alleBalken.length);
+
+        let summe = 0;
+
+        for (let j = start; j < ende; j++) {
+
+            summe += daten[j];
 
         }
 
-        // Regelmäßig neue Zielhöhen erzeugen
-        setInterval(function() {
+        let durchschnitt = summe / (ende - start);
 
-            for (let i = 0; i < alleBalken.length; i++) {
+        zielHoehen[i] = 10 + durchschnitt / 255 * 80;
 
-                zielHoehen[i] = Math.random() * 50 + 10;
+    }
 
-            }
+    }, 50);
 
-        }, 600);
+// Balken weich bewegen
+function animation() {
+    for (let i = 0; i < alleBalken.length; i++) {
+        aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * 2;
+        alleBalken[i].style.height = aktuelleHoehen[i] + "px";
+    }
 
-        // Balken weich bewegen
-        setInterval(function() {
+    requestAnimationFrame(animation);
+}
 
-            for (let i = 0; i < alleBalken.length; i++) {
+animation();
 
-                aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * 0.1;
-
-                alleBalken[i].style.height = aktuelleHoehen[i] + "px";
-
-            }
-
-        }, 16);
-
-    </script>
+</script>
 </body>
 </html>
-
-    
