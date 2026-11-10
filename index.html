@@ -72,7 +72,7 @@
 // Analyser erstellen 
     let analyser = audioContext.createAnalyser();
 
-      analyser.fftSize = 256;
+      analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.85;
 
 // Arrays erstellen
@@ -89,7 +89,7 @@
     audioQuelle.connect(analyser);
     analyser.connect(audioContext.destination);
 
-    let originalHoehen = Array(18).fill(30);
+    let originalHoehen = Array(18).fill(10);
 
 // Startwerte festlegen
     for (let i = 0; i < alleBalken.length; i++) {
@@ -112,6 +112,12 @@ audioDatei.addEventListener("change", function() {
 
     });
     let empfindlichkeit = 1.2;
+    let gewichtungen = [
+    0.15, 0.25, 0.35,
+    0.45, 0.55, 0.65, 0.75, 0.85, 0.95,
+    0.95, 0.85, 0.75, 0.65, 0.55, 0.45,
+    0.50, 0.40, 0.30
+];
 setInterval(function() {
      if (audioPlayer.paused) {
         for (let i = 0; i < alleBalken.length; i++) {
@@ -126,23 +132,37 @@ setInterval(function() {
 
     for (let i = 0; i < alleBalken.length; i++) {
 
-        let start = Math.floor(i * daten.length / alleBalken.length);
+        let frequenzGruppe;
 
-        let ende = Math.floor((i + 1) * daten.length / alleBalken.length);
-
-        let summe = 0;
-
-        for (let j = start; j < ende; j++) {
-
-            summe += daten[j];
-
+        if (i <= 8) {
+        frequenzGruppe = (8 - i) * 2;
+        } else {
+        frequenzGruppe = (i - 9) * 2 + 1;
         }
 
+let start = Math.floor(frequenzGruppe * daten.length / alleBalken.length);
+let ende = Math.floor((frequenzGruppe + 1) * daten.length / alleBalken.length);
+
+        let summe = 0;
+        if (i === 8 || i === 9) {
+           start = 0;
+        ende = Math.floor(150 / (audioContext.sampleRate / analyser.fftSize));
+        }
+        for (let j = start; j < ende; j++) {
+        summe += daten[j];
+        }
         let durchschnitt = summe / (ende - start);
-        let verstaerkt = Math.min(durchschnitt * empfindlichkeit, 255);
+        
+        if (i === 8 || i === 9) {
+        ende = Math.min(ende, Math.floor(150 / (audioContext.sampleRate / analyser.fftSize)));
+        }
+        let gewichtung = gewichtungen[i];
 
-        zielHoehen[i] = 10 + verstaerkt / 255 * 80;
+        let bassFaktor = (i === 8 || i === 9) ? 0.7 : 1;
 
+        let verstaerkt = Math.min(durchschnitt * empfindlichkeit * gewichtung * bassFaktor, 255);
+
+        zielHoehen[i] = 10 + verstaerkt / 255 * 55;
     }
 
     }, 50);
