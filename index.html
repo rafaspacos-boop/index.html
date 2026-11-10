@@ -30,7 +30,7 @@
             height: 30px;
             background-color: lightblue;
             border-radius: 10px;
-            animatio: bewegen 1s infinite ease-in-out alternate;
+            animation: bewegen 1s infinite ease-in-out alternate;
             transition: height 0.15s ease;
             }  
          .bar-1 {
@@ -100,28 +100,44 @@
     <div class="bar bar-6"></div>
     </div>
     <script>
-        console.log("Audio Visualizer gestartet");
-        let lautstaerke = 50;
-        lautstaerke = 80;
-        console.log(lautstaerke);
-        let balken = document.querySelector(".bar-1");
-        console.log(balken);
-        let neueHoehe = 60;
-        balken.style.height = neueHoehe + "px";
-        let alleBalken = document.querySelectorAll(".bar");
-        console.log(alleBalken);
+          let alleBalken = document.querySelectorAll(".bar");
+
         let aktuelleHoehen = [];
         let zielHoehen = [];
+
+        // Startwerte festlegen
         for (let i = 0; i < alleBalken.length; i++) {
-        aktuelleHoehen[i] = 30;
-        zielHoehen[i] = Math.random() * 80 + 10;
+
+            aktuelleHoehen[i] = 30;
+
+            zielHoehen[i] = Math.random() * 50 + 10;
+
         }
+
+        // Regelmäßig neue Zielhöhen erzeugen
         setInterval(function() {
-        for (let i = 0; i < alleBalken.length; i++) {
-        aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * 0.1;
-        alleBalken[i].style.height = aktuelleHoehen[i] + "px";
-        }
+
+            for (let i = 0; i < alleBalken.length; i++) {
+
+                zielHoehen[i] = Math.random() * 50 + 10;
+
+            }
+
+        }, 600);
+
+        // Balken weich bewegen
+        setInterval(function() {
+
+            for (let i = 0; i < alleBalken.length; i++) {
+
+                aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * 0.1;
+
+                alleBalken[i].style.height = aktuelleHoehen[i] + "px";
+
+            }
+
         }, 16);
+
     </script>
 </body>
 </html>
