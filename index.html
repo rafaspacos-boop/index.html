@@ -106,6 +106,14 @@
           let alleBalken = document.querySelectorAll(".bar");
           let audioDatei = document.querySelector("#audioFile");
           let audioPlayer = document.querySelector("#audio");
+          audioPlayer.addEventListener("play", function() {
+          audioContext.resume();
+          });
+          let audioContext = new AudioContext();
+          let analyser = audioContext.createAnalyser();
+          let audioQuelle = audioContext.createMediaElementSource(audioPlayer);
+          audioQuelle.connect(analyser);
+          analyser.connect(audioContext.destination);
           audioDatei.addEventListener("change", function() {
           let datei = audioDatei.files[0];
           audioPlayer.src = URL.createObjectURL(datei);
