@@ -30,7 +30,6 @@
             height: 10px;
             background-color: lightblue;
             border-radius: 10px;
-            transition: height 0.15s ease;
             }  
                 
     </style>
@@ -47,6 +46,18 @@
     <div class="bar bar-4"></div>
     <div class="bar bar-5"></div>
     <div class="bar bar-6"></div>
+    <div class="bar bar-7"></div>
+    <div class="bar bar-8"></div>
+    <div class="bar bar-9"></div>
+    <div class="bar bar-10"></div>
+    <div class="bar bar-11"></div>
+    <div class="bar bar-12"></div>
+    <div class="bar bar-13"></div>
+    <div class="bar bar-14"></div>
+    <div class="bar bar-15"></div>
+    <div class="bar bar-16"></div>
+    <div class="bar bar-17"></div>
+    <div class="bar bar-18"></div>
     </div>
     
 <script>
@@ -58,7 +69,7 @@
 // AudioContext erstellen
     let audioContext = new AudioContext();
 
-// Analyser erstellen
+// Analyser erstellen 
     let analyser = audioContext.createAnalyser();
 
       analyser.fftSize = 256;
@@ -78,14 +89,13 @@
     audioQuelle.connect(analyser);
     analyser.connect(audioContext.destination);
 
+    let originalHoehen = [20, 20, 20, 20, 20, 20];
+
 // Startwerte festlegen
     for (let i = 0; i < alleBalken.length; i++) {
-
-      aktuelleHoehen[i] = 30;
-      zielHoehen[i] = 30;
-
+      aktuelleHoehen[i] = originalHoehen[i];
+      zielHoehen[i] = originalHoehen[i];
     }
-
 // AudioContext aktivieren
     audioPlayer.addEventListener("play", function() {
 
@@ -101,9 +111,16 @@ audioDatei.addEventListener("change", function() {
     audioPlayer.src = URL.createObjectURL(datei);
 
     });
-
-// Frequenzdaten auslesen
+    let empfindlichkeit = 1.2;
 setInterval(function() {
+     if (audioPlayer.paused) {
+        for (let i = 0; i < alleBalken.length; i++) {
+            zielHoehen[i] = originalHoehen[i];
+        }
+        return;
+    }
+
+    analyser.getByteFrequencyData(daten);
 
     analyser.getByteFrequencyData(daten);
 
@@ -122,8 +139,9 @@ setInterval(function() {
         }
 
         let durchschnitt = summe / (ende - start);
+        let verstaerkt = Math.min(durchschnitt * empfindlichkeit, 255);
 
-        zielHoehen[i] = 10 + durchschnitt / 255 * 80;
+        zielHoehen[i] = 10 + verstaerkt / 255 * 80;
 
     }
 
@@ -132,7 +150,7 @@ setInterval(function() {
 // Balken weich bewegen
 function animation() {
     for (let i = 0; i < alleBalken.length; i++) {
-        aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * 2;
+        aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * 0.5;
         alleBalken[i].style.height = aktuelleHoehen[i] + "px";
     }
 
