@@ -129,34 +129,36 @@ setInterval(function() {
 
     analyser.getByteFrequencyData(daten);
 
-    analyser.getByteFrequencyData(daten);
-
     for (let i = 0; i < alleBalken.length; i++) {
 
-        let frequenzGruppe;
-
-        if (i <= 8) {
-        frequenzGruppe = (8 - i) * 2;
-        } else {
-        frequenzGruppe = (i - 9) * 2 + 1;
-        }
-
-let start = Math.floor(frequenzGruppe * daten.length / alleBalken.length);
-let ende = Math.floor((frequenzGruppe + 1) * daten.length / alleBalken.length);
-
-        let summe = 0;
-        if (i === 8 || i === 9) {
-           start = 0;
-        ende = Math.floor(150 / (audioContext.sampleRate / analyser.fftSize));
-        }
-        for (let j = start; j < ende; j++) {
-        summe += daten[j];
-        }
-        let durchschnitt = summe / (ende - start);
+       let start;
+      let ende;
+    let binBreite = audioContext.sampleRate / analyser.fftSize;
+    let bassMitte = Math.ceil(75 / binBreite);
+    let bassEnde = Math.ceil(150 / binBreite);
+    if (i === 8) {
+    start = 0;
+    ende = bassMitte;
+    } else if (i === 9) {
+    start = bassMitte;
+    ende = bassEnde;
+    } else {
+    let frequenzGruppe;
+    if (i < 8) {
+        frequenzGruppe = (7 - i) * 2;
+    } else {
+        frequenzGruppe = (i - 10) * 2 + 1;
+    }
+    start = bassEnde + Math.floor(frequenzGruppe * (daten.length - bassEnde) / 16);
+    ende = bassEnde + Math.floor((frequenzGruppe + 1) * (daten.length - bassEnde) / 16);
+    }
+    let summe = 0;
+    for (let j = start; j < ende; j++) {
+    summe += daten[j];
+    }
+    let durchschnitt = summe / (ende - start);
         
-        if (i === 8 || i === 9) {
-        ende = Math.min(ende, Math.floor(150 / (audioContext.sampleRate / analyser.fftSize)));
-        }
+       
         let gewichtung = gewichtungen[i];
 
         let bassFaktor = (i === 8 || i === 9) ? bassEmpfindlichkeit : 1;
