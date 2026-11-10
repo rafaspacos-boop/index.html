@@ -169,19 +169,22 @@ function analysiereAudio() {
     }
 
     }
-
+        let letzteFrameZeit = 0;
 // Balken weich bewegen
-function animation() {
+function animation(zeit) {
     analysiereAudio();
+        let deltaZeit = zeit - letzteFrameZeit;
+        let weichheit = 1 - Math.pow(0.5, deltaZeit / 16.67);
+        letzteFrameZeit = zeit;
     for (let i = 0; i < alleBalken.length; i++) {
-        aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * 0.5;
+        aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * weichheit;
         alleBalken[i].style.height = aktuelleHoehen[i] + "px";
     }
 
     requestAnimationFrame(animation);
 }
 
-animation();
+    requestAnimationFrame(animation);
 
 </script>
 </body>
