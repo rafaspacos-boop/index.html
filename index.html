@@ -89,7 +89,7 @@
     audioQuelle.connect(analyser);
     analyser.connect(audioContext.destination);
 
-    let originalHoehen = [20, 20, 20, 20, 20, 20];
+    let originalHoehen = Array(18).fill(30);
 
 // Startwerte festlegen
     for (let i = 0; i < alleBalken.length; i++) {
