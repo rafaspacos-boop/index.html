@@ -30,7 +30,7 @@
             height: 30px;
             background-color: lightblue;
             border-radius: 10px;
-            animation: bewegen 1s infinite ease-in-out alternate;
+            animatio: bewegen 1s infinite ease-in-out alternate;
             transition: height 0.15s ease;
             }  
          .bar-1 {
@@ -85,7 +85,7 @@
             }
             .bar-6 {
                 animation-delay: 0.5s;
-            }                  
+                }                  
     </style>
     
 </head>
@@ -110,12 +110,18 @@
         balken.style.height = neueHoehe + "px";
         let alleBalken = document.querySelectorAll(".bar");
         console.log(alleBalken);
+        let aktuelleHoehen = [];
+        let zielHoehen = [];
+        for (let i = 0; i < alleBalken.length; i++) {
+        aktuelleHoehen[i] = 30;
+        zielHoehen[i] = Math.random() * 80 + 10;
+        }
         setInterval(function() {
         for (let i = 0; i < alleBalken.length; i++) {
-        let zufallsHoehe = Math.random() * 50 + 10;
-        alleBalken[i].style.height = zufallsHoehe + "px";
-    }
-}, 150);
+        aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * 0.1;
+        alleBalken[i].style.height = aktuelleHoehen[i] + "px";
+        }
+        }, 16);
     </script>
 </body>
 </html>
