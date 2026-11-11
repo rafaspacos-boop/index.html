@@ -80,8 +80,8 @@
     analyser.connect(audioContext.destination);
     const aufnahmeAudio = audioContext.createMediaStreamDestination();
     const videoStream = canvas.captureStream(30);
-    const kombinierterStream = new MediaStream([
-    const recorder = new MediaRecorder(kombinierterStream);
+    const kombinierterStream = new MediaStream
+    recorder = new MediaRecorder(kombinierterStream);
     const aufnahmeDaten = [];
     recorder.addEventListener("dataavailable", function(event) {
     aufnahmeDaten.push(event.data);
@@ -113,7 +113,7 @@ aufnahmeStarten.addEventListener("click", function() {
 });
     ...videoStream.getVideoTracks(),
     ...aufnahmeAudio.stream.getAudioTracks()
-    ]);
+    ;
     analyser.connect(aufnahmeAudio);
 
     const originalHoehen = Array(18).fill(10);
