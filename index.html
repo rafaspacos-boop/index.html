@@ -172,6 +172,20 @@ let frameZaehler = 0;
 
 // Einzelne Videoframes aufnehmen
 async function aufnahmeFrameLoop() {
+  // Aufnahme starten
+aufnahmeStarten.addEventListener("click", async function() {
+    console.log("Button wurde geklickt!");
+
+    try {
+        await audioContext.resume();
+        await exportiereVideo();
+        await audioPlayer.play();
+
+        console.log("Aufnahme läuft!");
+    } catch (fehler) {
+        console.error("Startfehler:", fehler);
+    }
+});
     if (!aufnahmeAktiv) return;
 
     await videoQuelle.add(
