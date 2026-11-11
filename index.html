@@ -63,33 +63,33 @@
 <script>
     let alleBalken = document.querySelectorAll(".bar");
 
-    let audioDatei = document.querySelector("#audioFile");
-    let audioPlayer = document.querySelector("#audio");
+    const audioDatei = document.querySelector("#audioFile");
+    const audioPlayer = document.querySelector("#audio");
 
 // AudioContext erstellen
-    let audioContext = new AudioContext();
+    const audioContext = new AudioContext();
 
 // Analyser erstellen 
-    let analyser = audioContext.createAnalyser();
+    const analyser = audioContext.createAnalyser();
 
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.85;
 
 // Arrays erstellen
-    let aktuelleHoehen = [];
-    let zielHoehen = [];
+    const aktuelleHoehen = [];
+    const zielHoehen = [];
 
 // Messwerte speichern
-    let daten = new Uint8Array(analyser.frequencyBinCount);
+    const daten = new Uint8Array(analyser.frequencyBinCount);
 
 // Audioquelle erstellen
-    let audioQuelle = audioContext.createMediaElementSource(audioPlayer);
+    const audioQuelle = audioContext.createMediaElementSource(audioPlayer);
 
 // Audioverbindungen
     audioQuelle.connect(analyser);
     analyser.connect(audioContext.destination);
 
-    let originalHoehen = Array(18).fill(10);
+    const originalHoehen = Array(18).fill(10);
 
 // Startwerte festlegen
     for (let i = 0; i < alleBalken.length; i++) {
@@ -106,19 +106,20 @@
 // Audiodatei laden
 audioDatei.addEventListener("change", function() {
 
-    let datei = audioDatei.files[0];
-
+    const datei = audioDatei.files[0];
+  if (datei) {
     audioPlayer.src = URL.createObjectURL(datei);
-
+  }
     });
-    let empfindlichkeit = 1.2;
-    let bassEmpfindlichkeit = 0.7;
-    let gewichtungen = [
+    const empfindlichkeit = 1.2;
+    const bassEmpfindlichkeit = 0.7;
+    const gewichtungen = [
     0.15, 0.25, 0.35,
     0.45, 0.55, 0.65, 0.75, 0.85, 0.95,
     0.95, 0.85, 0.75, 0.65, 0.55, 0.45,
     0.50, 0.40, 0.30
 ];
+const binBreite = audioContext.sampleRate / analyser.fftSize;
 function analysiereAudio() {
      if (audioPlayer.paused) {
         for (let i = 0; i < alleBalken.length; i++) {
@@ -133,7 +134,6 @@ function analysiereAudio() {
 
        let start;
       let ende;
-    let binBreite = audioContext.sampleRate / analyser.fftSize;
     let bassMitte = Math.ceil(75 / binBreite);
     let bassEnde = Math.ceil(150 / binBreite);
     if (i === 8) {
@@ -170,11 +170,12 @@ function analysiereAudio() {
 
     }
         let letzteFrameZeit = 0;
+        let restFaktor = 0.5
 // Balken weich bewegen
 function animation(zeit) {
     analysiereAudio();
-        let deltaZeit = zeit - letzteFrameZeit;
-        let weichheit = 1 - Math.pow(0.5, deltaZeit / 16.67);
+        let deltaZeit = Math.min(zeit - letzteFrameZeit, 50);
+        let weichheit = 1 - Math.pow(restFaktor, deltaZeit / 16.67);
         letzteFrameZeit = zeit;
     for (let i = 0; i < alleBalken.length; i++) {
         aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * weichheit;
