@@ -7,7 +7,7 @@
     
     <style>
         body{
-             background-color: #50905a;
+             background-color: #333333;
              display: flex;
              flex-direction: column;
              align-items: center;
@@ -34,10 +34,15 @@
     <input type="file" id="audioFile" accept="audio/*">
     <audio id="audio" controls></audio>
     <canvas id="visualizer" width="600" height="200"></canvas>
+    <label>
+      <input type="checkbox" id="hintergrundAuswahl">
+      Hintergrund mit aufnehmen
+    </label>
     
 <script>
     const canvas = document.querySelector("#visualizer");
     const ctx = canvas.getContext("2d");
+    const hintergrundAuswahl = document.querySelector("#hintergrundAuswahl");
     const anzahlBalken = 18;
 
     const audioDatei = document.querySelector("#audioFile");
@@ -148,11 +153,19 @@ function analysiereAudio() {
     }
         let letzteFrameZeit = 0;
         let restFaktor = 0.5
+        let mitHintergrund = false;
+          hintergrundAuswahl.addEventListener("change", function() {
+          mitHintergrund = hintergrundAuswahl.checked;
+          });
 
 function zeichneVisualizer() {
 
     // Zeichenfläche leeren
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (mitHintergrund) {
+        ctx.fillStyle = "#50905a";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
 
     // Oval zeichnen
     ctx.beginPath();
