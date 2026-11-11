@@ -89,9 +89,6 @@ const kombinierterStream = new MediaStream([
 // Recorder erstellen – Browser wählt das Format selbst
 const recorder = new MediaRecorder(kombinierterStream);
 
-// Aufnahmedaten speichern
-const aufnahmeDaten = [];
-
 recorder.addEventListener("dataavailable", function(event) {
     if (event.data.size > 0) {
         aufnahmeDaten.push(event.data);
