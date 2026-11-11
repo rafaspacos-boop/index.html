@@ -40,71 +40,17 @@
     </label>
     <button id="aufnahmeStarten">Aufnahme starten</button>
     <button id="aufnahmeStoppen">Aufnahme beenden</button>
-    
-<script type="module">
 
+<script>    
 import * as Mediabunny from "https://esm.sh/mediabunny";
-console.log("Mediabunny geladen:", Mediabunny);
 
-async function testeCodecs() {
-    const codecs = [
-        "vp09.00.10.08",
-        "vp8"
-    ];
 
-    for (const codec of codecs) {
-        const ergebnis = await VideoEncoder.isConfigSupported({
-            codec: codec,
-            width: 600,
-            height: 200,
-            bitrate: 1000000,
-            framerate: 30,
-            alpha: "keep"
-        });
+// ========================================
+// 1. HTML-ELEMENTE
+// ========================================
 
-        console.log(
-            codec,
-            "Unterstützt:",
-            ergebnis.supported
-        );
-    }
-}
-
-testeCodecs();
-
-console.log("VP9:", MediaRecorder.isTypeSupported("video/webm;codecs=vp9"));
-console.log("VP8:", MediaRecorder.isTypeSupported("video/webm;codecs=vp8"));
-console.log("WebM:", MediaRecorder.isTypeSupported("video/webm"));
-
-console.log("VideoEncoder:", typeof VideoEncoder);
-console.log("VideoFrame:", typeof VideoFrame);
-console.log("AudioEncoder:", typeof AudioEncoder);
-
-const testEncoder = new VideoEncoder({
-    output() {},
-    error(error) {
-        console.error("Encoder-Fehler:", error);
-    }
-});
-
-try {
-    testEncoder.configure({
-        codec: "vp09.00.10.08",
-        width: 600,
-        height: 200,
-        bitrate: 1000000,
-        framerate: 30,
-        alpha: "keep"
-    });
-
-    console.log("VP9-Encoder erfolgreich konfiguriert!");
-} catch (error) {
-    console.error("Konfiguration fehlgeschlagen:", error);
-}
-
-// HTML-Elemente auswählen
 const canvas = document.querySelector("#visualizer");
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d", { alpha: true });
 
 const hintergrundAuswahl = document.querySelector("#hintergrundAuswahl");
 const audioDatei = document.querySelector("#audioFile");
@@ -113,8 +59,13 @@ const audioPlayer = document.querySelector("#audio");
 const aufnahmeStarten = document.querySelector("#aufnahmeStarten");
 const aufnahmeStoppen = document.querySelector("#aufnahmeStoppen");
 
-// Grundeinstellungen
+
+// ========================================
+// 2. GRUNDEINSTELLUNGEN
+// ========================================
+
 const anzahlBalken = 18;
+
 const aktuelleHoehen = [];
 const zielHoehen = [];
 
@@ -126,6 +77,11 @@ analyser.smoothingTimeConstant = 0.85;
 
 const daten = new Uint8Array(analyser.frequencyBinCount);
 
+
+// ========================================
+// 3. AUDIOVERBINDUNGEN
+// ========================================
+
 // Audioquelle erstellen
 const audioQuelle = audioContext.createMediaElementSource(audioPlayer);
 
@@ -133,22 +89,30 @@ const audioQuelle = audioContext.createMediaElementSource(audioPlayer);
 audioQuelle.connect(analyser);
 analyser.connect(audioContext.destination);
 
-// Audio für die Aufnahme bereitstellen
+// Audio für den Export bereitstellen
 const aufnahmeAudio = audioContext.createMediaStreamDestination();
-// Video-Ausgabe vorbereiten
+
+analyser.connect(aufnahmeAudio);
+
+
+// ========================================
+// 4. MEDIABUNNY EXPORT VORBEREITEN
+// ========================================
+
+// Ausgabe erstellen
 const output = new Mediabunny.Output({
     format: new Mediabunny.WebMOutputFormat(),
     target: new Mediabunny.BufferTarget()
 });
 
-// Visualizer als Videoquelle
+// Videoquelle erstellen
 const videoQuelle = new Mediabunny.CanvasSource(canvas, {
     codec: "vp9",
     quality: new Mediabunny.Quality("medium"),
     alpha: "keep"
 });
 
-// Audio als Tonquelle
+// Audioquelle erstellen
 const audioQuelleExport = new Mediabunny.MediaStreamAudioTrackSource(
     aufnahmeAudio.stream.getAudioTracks()[0],
     {
@@ -157,181 +121,227 @@ const audioQuelleExport = new Mediabunny.MediaStreamAudioTrackSource(
     }
 );
 
-// Quellen zur Ausgabe hinzufügen
+// Video und Audio hinzufügen
 output.addVideoTrack(videoQuelle, {
     frameRate: 30
 });
 
 output.addAudioTrack(audioQuelleExport);
 
-console.log("Export vorbereitet!");
 
-// Aufnahme vorbereiten
+// ========================================
+// 5. AUFNAHMESTEUERUNG
+// ========================================
+
 let aufnahmeAktiv = false;
 let frameZaehler = 0;
 
-// Einzelne Videoframes aufnehmen
+let frameLoopPromise = null;
+let beendenLaeuft = false;
+
+
+// Videoframes aufnehmen
 async function aufnahmeFrameLoop() {
-  // Aufnahme starten
-aufnahmeStarten.addEventListener("click", async function() {
-    console.log("Button wurde geklickt!");
 
-    try {
-        await audioContext.resume();
-        await exportiereVideo();
-        await audioPlayer.play();
+    const startZeit = performance.now();
 
-        console.log("Aufnahme läuft!");
-    } catch (fehler) {
-        console.error("Startfehler:", fehler);
+    while (aufnahmeAktiv) {
+
+        const zeitstempel = frameZaehler / 30;
+
+        await videoQuelle.add(
+            zeitstempel,
+            1 / 30
+        );
+
+        frameZaehler++;
+
+        const naechsterFrame = startZeit + frameZaehler * 1000 / 30;
+
+        const wartezeit = Math.max(
+            0,
+            naechsterFrame - performance.now()
+        );
+
+        if (wartezeit > 0) {
+            await new Promise(resolve => setTimeout(resolve, wartezeit));
+        }
     }
-});
-    if (!aufnahmeAktiv) return;
-
-    await videoQuelle.add(
-        frameZaehler / 30,
-        1 / 30
-    );
-
-    frameZaehler++;
-
-    setTimeout(aufnahmeFrameLoop, 1000 / 30);
 }
 
-// Export starten
+
+// Aufnahme starten
 async function exportiereVideo() {
+
+    if (!audioPlayer.src) {
+        console.error("Bitte zuerst eine Audiodatei auswählen!");
+        return;
+    }
+
+    if (output.state !== "pending") {
+        console.error("Dieser Export wurde bereits verwendet.");
+        return;
+    }
+
+    await audioContext.resume();
+
     await output.start();
+
+    await audioPlayer.play();
 
     aufnahmeAktiv = true;
     frameZaehler = 0;
 
-    aufnahmeFrameLoop();
+    frameLoopPromise = aufnahmeFrameLoop();
 
-    console.log("Aufnahme läuft!");
+    aufnahmeStarten.disabled = true;
+    aufnahmeStoppen.disabled = false;
+
+    console.log("Aufnahme gestartet!");
 }
 
-analyser.connect(aufnahmeAudio);
-
-// Video vom Canvas aufnehmen
-const videoStream = canvas.captureStream(30);
-
-// Audio und Video zusammenführen
-const kombinierterStream = new MediaStream([
-    ...videoStream.getVideoTracks(),
-    ...aufnahmeAudio.stream.getAudioTracks()
-]);
-
-// Recorder erstellen – Browser wählt das Format selbst
-const recorder = new MediaRecorder(kombinierterStream);
-
-recorder.addEventListener("dataavailable", function(event) {
-    if (event.data.size > 0) {
-        aufnahmeDaten.push(event.data);
-    }
-});
-
-// Aufnahme herunterladen
-recorder.addEventListener("stop", function() {
-    const videoDatei = new Blob(aufnahmeDaten, {
-        type: recorder.mimeType
-    });
-
-    const downloadURL = URL.createObjectURL(videoDatei);
-
-    const downloadLink = document.createElement("a");
-    downloadLink.href = downloadURL;
-    downloadLink.download = "Audio-Visualizer.webm";
-    downloadLink.click();
-
-    setTimeout(function() {
-        URL.revokeObjectURL(downloadURL);
-    }, 1000);
-});
-
-// Aufnahme starten
-aufnahmeStarten.addEventListener("click", async function() {
-    await audioContext.resume();
-
-    if (recorder.state === "inactive") {
-        aufnahmeDaten.length = 0;
-        recorder.start();
-    }
-});
 
 // Aufnahme beenden
-aufnahmeStoppen.addEventListener("click", function() {
-    if (recorder.state === "recording") {
-        recorder.stop();
+async function beendeAufnahme() {
+
+    if (!aufnahmeAktiv || beendenLaeuft) {
+        return;
     }
-});
 
-// Aufnahmedaten speichern
-const aufnahmeDaten = [];
+    beendenLaeuft = true;
 
-recorder.addEventListener("dataavailable", function(event) {
-    if (event.data.size > 0) {
-        aufnahmeDaten.push(event.data);
+    aufnahmeAktiv = false;
+
+    audioPlayer.pause();
+
+    aufnahmeStarten.disabled = true;
+    aufnahmeStoppen.disabled = true;
+
+    try {
+
+        // Warten, bis der letzte Videoframe verarbeitet wurde
+        await frameLoopPromise;
+
+        // Video und Audio fertigstellen
+        await output.finalize();
+
+        // Fertige Videodatei erstellen
+        const videoDatei = new Blob(
+            [output.target.buffer],
+            {
+                type: "video/webm"
+            }
+        );
+
+        // Download vorbereiten
+        const downloadURL = URL.createObjectURL(videoDatei);
+
+        const downloadLink = document.createElement("a");
+
+        downloadLink.href = downloadURL;
+        downloadLink.download = "Audio-Visualizer.webm";
+
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        downloadLink.remove();
+
+        setTimeout(function() {
+            URL.revokeObjectURL(downloadURL);
+        }, 2000);
+
+        console.log("Export erfolgreich abgeschlossen!");
+
+    } catch (fehler) {
+
+        console.error("Exportfehler:", fehler);
+
     }
-});
 
-// Aufnahme herunterladen
-recorder.addEventListener("stop", function() {
-    const videoDatei = new Blob(aufnahmeDaten, {
-        type: recorder.mimeType
-    });
+    aufnahmeAudio.stream.getAudioTracks().forEach(track => track.stop());
 
-    const downloadURL = URL.createObjectURL(videoDatei);
+    beendenLaeuft = false;
+}
 
-    const downloadLink = document.createElement("a");
-    downloadLink.href = downloadURL;
-    downloadLink.download = "Audio-Visualizer.webm";
-    downloadLink.click();
 
-    setTimeout(function() {
-        URL.revokeObjectURL(downloadURL);
-    }, 1000);
-});
+// ========================================
+// 6. BUTTONS
+// ========================================
 
-// Aufnahme starten
+// Startbutton
 aufnahmeStarten.addEventListener("click", async function() {
-    await audioContext.resume();
 
-    if (recorder.state === "inactive") {
-        aufnahmeDaten.length = 0;
-        recorder.start();
+    try {
+        await exportiereVideo();
+
+    } catch (fehler) {
+        console.error("Startfehler:", fehler);
     }
+
 });
 
-// Aufnahme beenden
+// Stoppbutton
 aufnahmeStoppen.addEventListener("click", function() {
-    if (recorder.state === "recording") {
-        recorder.stop();
-    }
+
+    beendeAufnahme();
+
 });
 
-// Startwerte der Balken
+// Bei Ende der Musik automatisch stoppen
+audioPlayer.addEventListener("ended", function() {
+
+    beendeAufnahme();
+
+});
+
+aufnahmeStoppen.disabled = true;
+
+
+// ========================================
+// 7. STARTWERTE DER BALKEN
+// ========================================
+
 const originalHoehen = Array(18).fill(10);
 
 for (let i = 0; i < anzahlBalken; i++) {
+
     aktuelleHoehen[i] = originalHoehen[i];
     zielHoehen[i] = originalHoehen[i];
+
 }
 
-// AudioContext aktivieren
+
+// ========================================
+// 8. AUDIOCONTEXT AKTIVIEREN
+// ========================================
+
 audioPlayer.addEventListener("play", function() {
+
     audioContext.resume();
+
 });
 
-// Audiodatei laden
+
+// ========================================
+// 9. AUDIODATEI LADEN
+// ========================================
+
 audioDatei.addEventListener("change", function() {
+
     const datei = audioDatei.files[0];
 
     if (datei) {
+
         audioPlayer.src = URL.createObjectURL(datei);
+
     }
+
 });
 
-// Empfindlichkeit
+
+// ========================================
+// 10. EMPFINDLICHKEIT
+// ========================================
+
 const empfindlichkeit = 1.2;
 const bassEmpfindlichkeit = 0.7;
 
@@ -344,18 +354,26 @@ const gewichtungen = [
 
 const binBreite = audioContext.sampleRate / analyser.fftSize;
 
-// Audio analysieren
+
+// ========================================
+// 11. AUDIO ANALYSIEREN
+// ========================================
+
 function analysiereAudio() {
+
     if (audioPlayer.paused) {
+
         for (let i = 0; i < anzahlBalken; i++) {
             zielHoehen[i] = originalHoehen[i];
         }
+
         return;
     }
 
     analyser.getByteFrequencyData(daten);
 
     for (let i = 0; i < anzahlBalken; i++) {
+
         let start;
         let ende;
 
@@ -363,18 +381,27 @@ function analysiereAudio() {
         let bassEnde = Math.ceil(150 / binBreite);
 
         if (i === 8) {
+
             start = 0;
             ende = bassMitte;
+
         } else if (i === 9) {
+
             start = bassMitte;
             ende = bassEnde;
+
         } else {
+
             let frequenzGruppe;
 
             if (i < 8) {
+
                 frequenzGruppe = (7 - i) * 2;
+
             } else {
+
                 frequenzGruppe = (i - 10) * 2 + 1;
+
             }
 
             start = bassEnde + Math.floor(
@@ -384,12 +411,15 @@ function analysiereAudio() {
             ende = bassEnde + Math.floor(
                 (frequenzGruppe + 1) * (daten.length - bassEnde) / 16
             );
+
         }
 
         let summe = 0;
 
         for (let j = start; j < ende; j++) {
+
             summe += daten[j];
+
         }
 
         let durchschnitt = summe / (ende - start);
@@ -405,40 +435,75 @@ function analysiereAudio() {
         );
 
         zielHoehen[i] = 10 + verstaerkt / 255 * 55;
+
     }
+
 }
 
-// Hintergrundauswahl
+
+// ========================================
+// 12. HINTERGRUNDAUSWAHL
+// ========================================
+
 let mitHintergrund = false;
 
 hintergrundAuswahl.addEventListener("change", function() {
+
     mitHintergrund = hintergrundAuswahl.checked;
+
 });
 
-// Visualizer zeichnen
+
+// ========================================
+// 13. VISUALIZER ZEICHNEN
+// ========================================
+
 function zeichneVisualizer() {
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (mitHintergrund) {
+
         ctx.fillStyle = "#50905a";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
     }
 
     // Oval zeichnen
     ctx.beginPath();
-    ctx.ellipse(300, 100, 300, 100, 0, 0, Math.PI * 2);
+
+    ctx.ellipse(
+        300,
+        100,
+        300,
+        100,
+        0,
+        0,
+        Math.PI * 2
+    );
+
     ctx.fillStyle = "#005e00";
     ctx.fill();
 
+
     // Balken zeichnen
     for (let i = 0; i < anzahlBalken; i++) {
+
         let breite = 12;
         let abstand = 10;
 
         let x = 107 + i * (breite + abstand);
+
         let hoehe = aktuelleHoehen[i] * 2;
 
         ctx.beginPath();
+
         ctx.roundRect(
             x,
             100 - hoehe / 2,
@@ -449,29 +514,46 @@ function zeichneVisualizer() {
 
         ctx.fillStyle = "lightblue";
         ctx.fill();
+
     }
+
 }
 
-// Balken weich bewegen
+
+// ========================================
+// 14. BALKEN WEICH BEWEGEN
+// ========================================
+
 let letzteFrameZeit = 0;
 let restFaktor = 0.5;
 
 function animation(zeit) {
+
     analysiereAudio();
 
-    let deltaZeit = Math.min(zeit - letzteFrameZeit, 50);
-    let weichheit = 1 - Math.pow(restFaktor, deltaZeit / 16.67);
+    let deltaZeit = Math.min(
+        zeit - letzteFrameZeit,
+        50
+    );
+
+    let weichheit = 1 - Math.pow(
+        restFaktor,
+        deltaZeit / 16.67
+    );
 
     letzteFrameZeit = zeit;
 
     for (let i = 0; i < anzahlBalken; i++) {
+
         aktuelleHoehen[i] +=
             (zielHoehen[i] - aktuelleHoehen[i]) * weichheit;
+
     }
 
     zeichneVisualizer();
 
     requestAnimationFrame(animation);
+
 }
 
 requestAnimationFrame(animation);
