@@ -40,12 +40,6 @@
     </label>
     <button id="aufnahmeStarten">Aufnahme starten</button>
     <button id="aufnahmeStoppen">Aufnahme beenden</button>
-    const aufnahmeStoppen = document.querySelector("#aufnahmeStoppen");
-    aufnahmeStoppen.addEventListener("click", function() {
-    if (recorder.state === "recording") {
-        recorder.stop();
-    }
-    });
     
 <script>
     const canvas = document.querySelector("#visualizer");
@@ -76,8 +70,65 @@
     const audioQuelle = audioContext.createMediaElementSource(audioPlayer);
 
 // Audioverbindungen
-    audioQuelle.connect(analyser);
-    analyser.connect(audioContext.destination);
+    // Audioverbindungen
+audioQuelle.connect(analyser);
+analyser.connect(audioContext.destination);
+
+// Audio für die Aufnahme bereitstellen
+const aufnahmeAudio = audioContext.createMediaStreamDestination();
+analyser.connect(aufnahmeAudio);
+
+// Video aufnehmen
+const videoStream = canvas.captureStream(30);
+
+// Audio und Video zusammenführen
+const kombinierterStream = new MediaStream([
+    ...videoStream.getVideoTracks(),
+    ...aufnahmeAudio.stream.getAudioTracks()
+]);
+
+// Aufnahme erstellen
+const recorder = new MediaRecorder(kombinierterStream);
+
+// Aufnahmedaten speichern
+const aufnahmeDaten = [];
+
+recorder.addEventListener("dataavailable", function(event) {
+    aufnahmeDaten.push(event.data);
+});
+
+// Aufnahme herunterladen
+recorder.addEventListener("stop", function() {
+    const videoDatei = new Blob(aufnahmeDaten, {
+        type: recorder.mimeType
+    });
+
+    const downloadURL = URL.createObjectURL(videoDatei);
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadURL;
+    downloadLink.download = "Audio-Visualizer.webm";
+
+    downloadLink.click();
+
+    URL.revokeObjectURL(downloadURL);
+});
+
+// Aufnahme starten
+const aufnahmeStarten = document.querySelector("#aufnahmeStarten");
+
+aufnahmeStarten.addEventListener("click", function() {
+    recorder.start();
+});
+
+// Aufnahme beenden
+const aufnahmeStoppen = document.querySelector("#aufnahmeStoppen");
+
+aufnahmeStoppen.addEventListener("click", function() {
+    if (recorder.state === "recording") {
+        recorder.stop();
+    }
+});
     const aufnahmeAudio = audioContext.createMediaStreamDestination();
     const videoStream = canvas.captureStream(30);
     const kombinierterStream = new MediaStream
