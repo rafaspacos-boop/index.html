@@ -41,7 +41,67 @@
     <button id="aufnahmeStarten">Aufnahme starten</button>
     <button id="aufnahmeStoppen">Aufnahme beenden</button>
     
-<script>
+<script type="module">
+
+import * as Mediabunny from "https://esm.sh/mediabunny";
+console.log("Mediabunny geladen:", Mediabunny);
+
+async function testeCodecs() {
+    const codecs = [
+        "vp09.00.10.08",
+        "vp8"
+    ];
+
+    for (const codec of codecs) {
+        const ergebnis = await VideoEncoder.isConfigSupported({
+            codec: codec,
+            width: 600,
+            height: 200,
+            bitrate: 1000000,
+            framerate: 30,
+            alpha: "keep"
+        });
+
+        console.log(
+            codec,
+            "Unterstützt:",
+            ergebnis.supported
+        );
+    }
+}
+
+testeCodecs();
+
+console.log("VP9:", MediaRecorder.isTypeSupported("video/webm;codecs=vp9"));
+console.log("VP8:", MediaRecorder.isTypeSupported("video/webm;codecs=vp8"));
+console.log("WebM:", MediaRecorder.isTypeSupported("video/webm"));
+
+console.log("VideoEncoder:", typeof VideoEncoder);
+console.log("VideoFrame:", typeof VideoFrame);
+console.log("AudioEncoder:", typeof AudioEncoder);
+
+const testEncoder = new VideoEncoder({
+    output() {},
+    error(error) {
+        console.error("Encoder-Fehler:", error);
+    }
+});
+
+try {
+    testEncoder.configure({
+        codec: "vp09.00.10.08",
+        width: 600,
+        height: 200,
+        bitrate: 1000000,
+        framerate: 30,
+        alpha: "keep"
+    });
+
+    console.log("VP9-Encoder erfolgreich konfiguriert!");
+} catch (error) {
+    console.error("Konfiguration fehlgeschlagen:", error);
+}
+
 // HTML-Elemente auswählen
 const canvas = document.querySelector("#visualizer");
 const ctx = canvas.getContext("2d");
@@ -75,6 +135,44 @@ analyser.connect(audioContext.destination);
 
 // Audio für die Aufnahme bereitstellen
 const aufnahmeAudio = audioContext.createMediaStreamDestination();
+// Video-Ausgabe vorbereiten
+const output = new Mediabunny.Output({
+    format: new Mediabunny.WebMOutputFormat(),
+    target: new Mediabunny.BufferTarget()
+});
+
+// Visualizer als Videoquelle
+const videoQuelle = new Mediabunny.CanvasSource(canvas, {
+    codec: "vp9",
+    quality: new Mediabunny.Quality("medium"),
+    alpha: "keep"
+});
+
+// Audio als Tonquelle
+const audioQuelleExport = new Mediabunny.MediaStreamAudioTrackSource(
+    aufnahmeAudio.stream.getAudioTracks()[0],
+    {
+        codec: "opus",
+        quality: new Mediabunny.Quality("medium")
+    }
+);
+
+// Quellen zur Ausgabe hinzufügen
+output.addVideoTrack(videoQuelle, {
+    frameRate: 30
+});
+
+output.addAudioTrack(audioQuelleExport);
+
+console.log("Export vorbereitet!");
+
+// Export starten
+async function exportiereVideo() {
+    await output.start();
+
+    console.log("Export gestartet!");
+}
+
 analyser.connect(aufnahmeAudio);
 
 // Video vom Canvas aufnehmen
