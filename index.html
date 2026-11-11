@@ -42,35 +42,34 @@
     <button id="aufnahmeStoppen">Aufnahme beenden</button>
     
 <script>
-    const canvas = document.querySelector("#visualizer");
-    const ctx = canvas.getContext("2d");
-    const hintergrundAuswahl = document.querySelector("#hintergrundAuswahl");
-    const anzahlBalken = 18;
+// HTML-Elemente auswählen
+const canvas = document.querySelector("#visualizer");
+const ctx = canvas.getContext("2d");
 
-    const audioDatei = document.querySelector("#audioFile");
-    const audioPlayer = document.querySelector("#audio");
+const hintergrundAuswahl = document.querySelector("#hintergrundAuswahl");
+const audioDatei = document.querySelector("#audioFile");
+const audioPlayer = document.querySelector("#audio");
 
-// AudioContext erstellen
-    const audioContext = new AudioContext();
+const aufnahmeStarten = document.querySelector("#aufnahmeStarten");
+const aufnahmeStoppen = document.querySelector("#aufnahmeStoppen");
 
-// Analyser erstellen 
-    const analyser = audioContext.createAnalyser();
+// Grundeinstellungen
+const anzahlBalken = 18;
+const aktuelleHoehen = [];
+const zielHoehen = [];
 
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.85;
+const audioContext = new AudioContext();
+const analyser = audioContext.createAnalyser();
 
-// Arrays erstellen
-    const aktuelleHoehen = [];
-    const zielHoehen = [];
+analyser.fftSize = 2048;
+analyser.smoothingTimeConstant = 0.85;
 
-// Messwerte speichern
-    const daten = new Uint8Array(analyser.frequencyBinCount);
+const daten = new Uint8Array(analyser.frequencyBinCount);
 
 // Audioquelle erstellen
-    const audioQuelle = audioContext.createMediaElementSource(audioPlayer);
+const audioQuelle = audioContext.createMediaElementSource(audioPlayer);
 
 // Audioverbindungen
-    // Audioverbindungen
 audioQuelle.connect(analyser);
 analyser.connect(audioContext.destination);
 
@@ -78,7 +77,7 @@ analyser.connect(audioContext.destination);
 const aufnahmeAudio = audioContext.createMediaStreamDestination();
 analyser.connect(aufnahmeAudio);
 
-// Video aufnehmen
+// Video vom Canvas aufnehmen
 const videoStream = canvas.captureStream(30);
 
 // Audio und Video zusammenführen
@@ -87,14 +86,16 @@ const kombinierterStream = new MediaStream([
     ...aufnahmeAudio.stream.getAudioTracks()
 ]);
 
-// Aufnahme erstellen
+// Recorder erstellen – Browser wählt das Format selbst
 const recorder = new MediaRecorder(kombinierterStream);
 
 // Aufnahmedaten speichern
 const aufnahmeDaten = [];
 
 recorder.addEventListener("dataavailable", function(event) {
-    aufnahmeDaten.push(event.data);
+    if (event.data.size > 0) {
+        aufnahmeDaten.push(event.data);
+    }
 });
 
 // Aufnahme herunterladen
@@ -108,37 +109,41 @@ recorder.addEventListener("stop", function() {
     const downloadLink = document.createElement("a");
     downloadLink.href = downloadURL;
     downloadLink.download = "Audio-Visualizer.webm";
-
     downloadLink.click();
 
-    URL.revokeObjectURL(downloadURL);
+    setTimeout(function() {
+        URL.revokeObjectURL(downloadURL);
+    }, 1000);
 });
 
 // Aufnahme starten
-const aufnahmeStarten = document.querySelector("#aufnahmeStarten");
+aufnahmeStarten.addEventListener("click", async function() {
+    await audioContext.resume();
 
-aufnahmeStarten.addEventListener("click", function() {
-    recorder.start();
+    if (recorder.state === "inactive") {
+        aufnahmeDaten.length = 0;
+        recorder.start();
+    }
 });
 
 // Aufnahme beenden
-const aufnahmeStoppen = document.querySelector("#aufnahmeStoppen");
-
 aufnahmeStoppen.addEventListener("click", function() {
     if (recorder.state === "recording") {
         recorder.stop();
     }
 });
-    const aufnahmeAudio = audioContext.createMediaStreamDestination();
-    const videoStream = canvas.captureStream(30);
-    const kombinierterStream = new MediaStream
-    recorder = new MediaRecorder(kombinierterStream);
-    const aufnahmeDaten = [];
-    recorder.addEventListener("dataavailable", function(event) {
-    aufnahmeDaten.push(event.data);
-    });
-    recorder.addEventListener("stop", function() {
 
+// Aufnahmedaten speichern
+const aufnahmeDaten = [];
+
+recorder.addEventListener("dataavailable", function(event) {
+    if (event.data.size > 0) {
+        aufnahmeDaten.push(event.data);
+    }
+});
+
+// Aufnahme herunterladen
+recorder.addEventListener("stop", function() {
     const videoDatei = new Blob(aufnahmeDaten, {
         type: recorder.mimeType
     });
@@ -148,58 +153,68 @@ aufnahmeStoppen.addEventListener("click", function() {
     const downloadLink = document.createElement("a");
     downloadLink.href = downloadURL;
     downloadLink.download = "Audio-Visualizer.webm";
-
     downloadLink.click();
 
-    URL.revokeObjectURL(downloadURL);
-});    
-    const aufnahmeStarten = document.querySelector("#aufnahmeStarten");
-    aufnahmeStarten.addEventListener("click", function() {
-    recorder.start();
-    });
-    const aufnahmeStarten = document.querySelector("#aufnahmeStarten");
-
-aufnahmeStarten.addEventListener("click", function() {
-    recorder.start();
+    setTimeout(function() {
+        URL.revokeObjectURL(downloadURL);
+    }, 1000);
 });
-    ...videoStream.getVideoTracks(),
-    ...aufnahmeAudio.stream.getAudioTracks()
-    ;
-    analyser.connect(aufnahmeAudio);
 
-    const originalHoehen = Array(18).fill(10);
+// Aufnahme starten
+aufnahmeStarten.addEventListener("click", async function() {
+    await audioContext.resume();
 
-// Startwerte festlegen
-    for (let i = 0; i < anzahlBalken; i++) {
-      aktuelleHoehen[i] = originalHoehen[i];
-      zielHoehen[i] = originalHoehen[i];
+    if (recorder.state === "inactive") {
+        aufnahmeDaten.length = 0;
+        recorder.start();
     }
+});
+
+// Aufnahme beenden
+aufnahmeStoppen.addEventListener("click", function() {
+    if (recorder.state === "recording") {
+        recorder.stop();
+    }
+});
+
+// Startwerte der Balken
+const originalHoehen = Array(18).fill(10);
+
+for (let i = 0; i < anzahlBalken; i++) {
+    aktuelleHoehen[i] = originalHoehen[i];
+    zielHoehen[i] = originalHoehen[i];
+}
+
 // AudioContext aktivieren
-    audioPlayer.addEventListener("play", function() {
-
+audioPlayer.addEventListener("play", function() {
     audioContext.resume();
-
-    });
+});
 
 // Audiodatei laden
 audioDatei.addEventListener("change", function() {
-
     const datei = audioDatei.files[0];
-  if (datei) {
-    audioPlayer.src = URL.createObjectURL(datei);
-  }
-    });
-    const empfindlichkeit = 1.2;
-    const bassEmpfindlichkeit = 0.7;
-    const gewichtungen = [
+
+    if (datei) {
+        audioPlayer.src = URL.createObjectURL(datei);
+    }
+});
+
+// Empfindlichkeit
+const empfindlichkeit = 1.2;
+const bassEmpfindlichkeit = 0.7;
+
+const gewichtungen = [
     0.15, 0.25, 0.35,
     0.45, 0.55, 0.65, 0.75, 0.85, 0.95,
     0.95, 0.85, 0.75, 0.65, 0.55, 0.45,
     0.50, 0.40, 0.30
 ];
+
 const binBreite = audioContext.sampleRate / analyser.fftSize;
+
+// Audio analysieren
 function analysiereAudio() {
-     if (audioPlayer.paused) {
+    if (audioPlayer.paused) {
         for (let i = 0; i < anzahlBalken; i++) {
             zielHoehen[i] = originalHoehen[i];
         }
@@ -209,59 +224,73 @@ function analysiereAudio() {
     analyser.getByteFrequencyData(daten);
 
     for (let i = 0; i < anzahlBalken; i++) {
+        let start;
+        let ende;
 
-       let start;
-      let ende;
-    let bassMitte = Math.ceil(75 / binBreite);
-    let bassEnde = Math.ceil(150 / binBreite);
-    if (i === 8) {
-    start = 0;
-    ende = bassMitte;
-    } else if (i === 9) {
-    start = bassMitte;
-    ende = bassEnde;
-    } else {
-    let frequenzGruppe;
-    if (i < 8) {
-        frequenzGruppe = (7 - i) * 2;
-    } else {
-        frequenzGruppe = (i - 10) * 2 + 1;
-    }
-    start = bassEnde + Math.floor(frequenzGruppe * (daten.length - bassEnde) / 16);
-    ende = bassEnde + Math.floor((frequenzGruppe + 1) * (daten.length - bassEnde) / 16);
-    }
-    let summe = 0;
-    for (let j = start; j < ende; j++) {
-    summe += daten[j];
-    }
-    let durchschnitt = summe / (ende - start);
-        
-       
+        let bassMitte = Math.ceil(75 / binBreite);
+        let bassEnde = Math.ceil(150 / binBreite);
+
+        if (i === 8) {
+            start = 0;
+            ende = bassMitte;
+        } else if (i === 9) {
+            start = bassMitte;
+            ende = bassEnde;
+        } else {
+            let frequenzGruppe;
+
+            if (i < 8) {
+                frequenzGruppe = (7 - i) * 2;
+            } else {
+                frequenzGruppe = (i - 10) * 2 + 1;
+            }
+
+            start = bassEnde + Math.floor(
+                frequenzGruppe * (daten.length - bassEnde) / 16
+            );
+
+            ende = bassEnde + Math.floor(
+                (frequenzGruppe + 1) * (daten.length - bassEnde) / 16
+            );
+        }
+
+        let summe = 0;
+
+        for (let j = start; j < ende; j++) {
+            summe += daten[j];
+        }
+
+        let durchschnitt = summe / (ende - start);
         let gewichtung = gewichtungen[i];
 
-        let bassFaktor = (i === 8 || i === 9) ? bassEmpfindlichkeit : 1;
+        let bassFaktor = (i === 8 || i === 9)
+            ? bassEmpfindlichkeit
+            : 1;
 
-        let verstaerkt = Math.min(durchschnitt * empfindlichkeit * gewichtung * bassFaktor, 255);
+        let verstaerkt = Math.min(
+            durchschnitt * empfindlichkeit * gewichtung * bassFaktor,
+            255
+        );
 
         zielHoehen[i] = 10 + verstaerkt / 255 * 55;
     }
+}
 
-    }
-        let letzteFrameZeit = 0;
-        let restFaktor = 0.5
-        let mitHintergrund = false;
-          hintergrundAuswahl.addEventListener("change", function() {
-          mitHintergrund = hintergrundAuswahl.checked;
-          });
+// Hintergrundauswahl
+let mitHintergrund = false;
 
+hintergrundAuswahl.addEventListener("change", function() {
+    mitHintergrund = hintergrundAuswahl.checked;
+});
+
+// Visualizer zeichnen
 function zeichneVisualizer() {
-
-    // Zeichenfläche leeren
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     if (mitHintergrund) {
         ctx.fillStyle = "#50905a";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+    }
 
     // Oval zeichnen
     ctx.beginPath();
@@ -271,35 +300,49 @@ function zeichneVisualizer() {
 
     // Balken zeichnen
     for (let i = 0; i < anzahlBalken; i++) {
-
         let breite = 12;
         let abstand = 10;
+
         let x = 107 + i * (breite + abstand);
         let hoehe = aktuelleHoehen[i] * 2;
 
         ctx.beginPath();
-        ctx.roundRect(x, 100 - hoehe / 2, breite, hoehe, 10);
+        ctx.roundRect(
+            x,
+            100 - hoehe / 2,
+            breite,
+            hoehe,
+            10
+        );
+
         ctx.fillStyle = "lightblue";
         ctx.fill();
     }
-}        
+}
+
 // Balken weich bewegen
+let letzteFrameZeit = 0;
+let restFaktor = 0.5;
+
 function animation(zeit) {
     analysiereAudio();
-        let deltaZeit = Math.min(zeit - letzteFrameZeit, 50);
-        let weichheit = 1 - Math.pow(restFaktor, deltaZeit / 16.67);
-        letzteFrameZeit = zeit;
+
+    let deltaZeit = Math.min(zeit - letzteFrameZeit, 50);
+    let weichheit = 1 - Math.pow(restFaktor, deltaZeit / 16.67);
+
+    letzteFrameZeit = zeit;
+
     for (let i = 0; i < anzahlBalken; i++) {
-        aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * weichheit;
-        
+        aktuelleHoehen[i] +=
+            (zielHoehen[i] - aktuelleHoehen[i]) * weichheit;
     }
-    
+
     zeichneVisualizer();
+
     requestAnimationFrame(animation);
 }
 
-    requestAnimationFrame(animation);
-
+requestAnimationFrame(animation);
 </script>
 </body>
 </html>
