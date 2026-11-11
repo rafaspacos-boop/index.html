@@ -82,6 +82,26 @@
     const videoStream = canvas.captureStream(30);
     const kombinierterStream = new MediaStream([
     const recorder = new MediaRecorder(kombinierterStream);
+    const aufnahmeDaten = [];
+    recorder.addEventListener("dataavailable", function(event) {
+    aufnahmeDaten.push(event.data);
+    });
+    recorder.addEventListener("stop", function() {
+
+    const videoDatei = new Blob(aufnahmeDaten, {
+        type: recorder.mimeType
+    });
+
+    const downloadURL = URL.createObjectURL(videoDatei);
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadURL;
+    downloadLink.download = "Audio-Visualizer.webm";
+
+    downloadLink.click();
+
+    URL.revokeObjectURL(downloadURL);
+});    
     const aufnahmeStarten = document.querySelector("#aufnahmeStarten");
     aufnahmeStarten.addEventListener("click", function() {
     recorder.start();
