@@ -166,11 +166,34 @@ output.addAudioTrack(audioQuelleExport);
 
 console.log("Export vorbereitet!");
 
+// Aufnahme vorbereiten
+let aufnahmeAktiv = false;
+let frameZaehler = 0;
+
+// Einzelne Videoframes aufnehmen
+async function aufnahmeFrameLoop() {
+    if (!aufnahmeAktiv) return;
+
+    await videoQuelle.add(
+        frameZaehler / 30,
+        1 / 30
+    );
+
+    frameZaehler++;
+
+    setTimeout(aufnahmeFrameLoop, 1000 / 30);
+}
+
 // Export starten
 async function exportiereVideo() {
     await output.start();
 
-    console.log("Export gestartet!");
+    aufnahmeAktiv = true;
+    frameZaehler = 0;
+
+    aufnahmeFrameLoop();
+
+    console.log("Aufnahme läuft!");
 }
 
 analyser.connect(aufnahmeAudio);
