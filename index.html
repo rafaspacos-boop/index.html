@@ -13,18 +13,12 @@
              align-items: center;
          }
         
-        #visualizer {
+         #visualizer {
             width: 300px;
             height: 100px;
-            background-color: #005e00;
-            border-radius: 50px;
             margin-top: 30px;
+            }
             
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        } 
          .bar {
             width: 6px;
             height: 10px;
@@ -39,29 +33,12 @@
     <h1>Audio Visualizer</h1>
     <input type="file" id="audioFile" accept="audio/*">
     <audio id="audio" controls></audio>
-    <div id="visualizer">
-    <div class="bar bar-1"></div>
-    <div class="bar bar-2"></div>
-    <div class="bar bar-3"></div>
-    <div class="bar bar-4"></div>
-    <div class="bar bar-5"></div>
-    <div class="bar bar-6"></div>
-    <div class="bar bar-7"></div>
-    <div class="bar bar-8"></div>
-    <div class="bar bar-9"></div>
-    <div class="bar bar-10"></div>
-    <div class="bar bar-11"></div>
-    <div class="bar bar-12"></div>
-    <div class="bar bar-13"></div>
-    <div class="bar bar-14"></div>
-    <div class="bar bar-15"></div>
-    <div class="bar bar-16"></div>
-    <div class="bar bar-17"></div>
-    <div class="bar bar-18"></div>
-    </div>
+    <canvas id="visualizer" width="600" height="200"></canvas>
     
 <script>
-    let alleBalken = document.querySelectorAll(".bar");
+    const canvas = document.querySelector("#visualizer");
+    const ctx = canvas.getContext("2d");
+    const anzahlBalken = 18;
 
     const audioDatei = document.querySelector("#audioFile");
     const audioPlayer = document.querySelector("#audio");
@@ -92,7 +69,7 @@
     const originalHoehen = Array(18).fill(10);
 
 // Startwerte festlegen
-    for (let i = 0; i < alleBalken.length; i++) {
+    for (let i = 0; i < anzahlBalken; i++) {
       aktuelleHoehen[i] = originalHoehen[i];
       zielHoehen[i] = originalHoehen[i];
     }
@@ -122,7 +99,7 @@ audioDatei.addEventListener("change", function() {
 const binBreite = audioContext.sampleRate / analyser.fftSize;
 function analysiereAudio() {
      if (audioPlayer.paused) {
-        for (let i = 0; i < alleBalken.length; i++) {
+        for (let i = 0; i < anzahlBalken; i++) {
             zielHoehen[i] = originalHoehen[i];
         }
         return;
@@ -130,7 +107,7 @@ function analysiereAudio() {
 
     analyser.getByteFrequencyData(daten);
 
-    for (let i = 0; i < alleBalken.length; i++) {
+    for (let i = 0; i < anzahlBalken; i++) {
 
        let start;
       let ende;
@@ -171,17 +148,44 @@ function analysiereAudio() {
     }
         let letzteFrameZeit = 0;
         let restFaktor = 0.5
+
+function zeichneVisualizer() {
+
+    // Zeichenfläche leeren
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Oval zeichnen
+    ctx.beginPath();
+    ctx.ellipse(300, 100, 300, 100, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#005e00";
+    ctx.fill();
+
+    // Balken zeichnen
+    for (let i = 0; i < anzahlBalken; i++) {
+
+        let breite = 12;
+        let abstand = 10;
+        let x = 107 + i * (breite + abstand);
+        let hoehe = aktuelleHoehen[i] * 2;
+
+        ctx.beginPath();
+        ctx.roundRect(x, 100 - hoehe / 2, breite, hoehe, 10);
+        ctx.fillStyle = "lightblue";
+        ctx.fill();
+    }
+}        
 // Balken weich bewegen
 function animation(zeit) {
     analysiereAudio();
         let deltaZeit = Math.min(zeit - letzteFrameZeit, 50);
         let weichheit = 1 - Math.pow(restFaktor, deltaZeit / 16.67);
         letzteFrameZeit = zeit;
-    for (let i = 0; i < alleBalken.length; i++) {
+    for (let i = 0; i < anzahlBalken; i++) {
         aktuelleHoehen[i] += (zielHoehen[i] - aktuelleHoehen[i]) * weichheit;
-        alleBalken[i].style.height = aktuelleHoehen[i] + "px";
+        
     }
-
+    
+    zeichneVisualizer();
     requestAnimationFrame(animation);
 }
 
